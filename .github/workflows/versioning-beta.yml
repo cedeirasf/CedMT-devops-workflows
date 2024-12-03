@@ -83,7 +83,7 @@ jobs:
           #!/bin/sh
 
           # Set new tags and force update
-          git tag ${{ steps.semver.outputs.next }}.rc.${{ github.event.number }}
+          git tag --force ${{ steps.semver.outputs.next }}.rc.${{ github.event.number }}
 
           # Push new tag forcing the update of the minor and major tag
           git push --tag --force
