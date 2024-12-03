@@ -15,13 +15,13 @@ permissions:
 
 jobs:
   call-versioning-workflow:
-    uses: mauroalderete/workflows/.github/workflows/versioning.yml@v0
+    uses: cedeirasf/CedMT-devops-workflows/.github/workflows/versioning.yml@v1
     secrets:
       github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
 
   call-release-workflow:
     needs: call-versioning-workflow
-    uses: mauroalderete/workflows/.github/workflows/release.yml@v0
+    uses: cedeirasf/CedMT-devops-workflows/.github/workflows/release.yml@v1
     with:
       next: ${{ needs.call-versioning-workflow.outputs.next-patch }}
       include-artifacts: false
