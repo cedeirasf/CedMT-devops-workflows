@@ -66,6 +66,26 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
+      - name: Remove latest candidate tag
+        id: remove
+        run: |
+          #!/bin/sh
+
+          # Get the latest candidate tag
+          latestTag=$(git tag | grep rc | tail -n 1)
+
+          # If the latestTag doesn't exists
+          if [ -z "$latestTag" ]; then
+            exit 0
+          fi
+
+          # The latestTag contains a candidate tag format v###.###.###.rc.###
+          regex="v[0-9]+\.[0-9]+\.[0-9]+\.rc\.[0-9]+"
+          if [[ $latestTag =~ $regex ]]; then
+            # Remove the latest candidate tag
+            git tag -d $latestTag
+          fi
+
       - name: Get next version
         id: semver
         uses: ietf-tools/semver-action@v1
