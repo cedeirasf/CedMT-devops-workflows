@@ -77,17 +77,84 @@ jobs:
           patchList: ${{ github.event.inputs.patchList || 'FIX, Fix, fix, FIXED, Fixed, fixed, Refactor, Refact, Refac, refac, refact, refactor, REFAC, REFACT, REFACTOR, refacs, refacts, refactors, REFACS, REFACTS, REFACTORS, config, conf, configs, confs, cofiguration, cofigurations, configure, doc, docs, docu, document, documentation, dependencies, dependencie, depends, depend, deps, dep, chore, build, rebuild, build(deps), build(deps-dev), ci, CI, test, tests, testing, wip, WIP, Wip' }}
           patchAll: false
 
+      - name: Generate candidate tag
+        id: candidate
+        run: |
+          #!/bin/sh
+
+          # Generate the candidate tag
+          candidate=${{ steps.semver.outputs.next }}.rc.${{ github.event.number }}
+  
+          # Output the candidate tag
+          echo "candidate=$candidate" >> $GITHUB_ENV
+
+      - name: Scan versioning sources
+        id: scan
+        run: |
+          #!/bin/sh
+
+          # Find the version.txt file
+          versionTxt=$(find . -name version.txt)
+
+          # Find the package.json file
+          packageJson=$(find . -name package.json)
+
+          # Find the .csproj files
+          csproj=$(find . -name "*.csproj")
+
+          echo "versionTxt=$versionTxt" >> $GITHUB_ENV
+          echo "packageJson=$packageJson" >> $GITHUB_ENV
+          echo "csproj=$csproj" >> $GITHUB_ENV
+
+      - name: Update version number in version.txt
+        if: steps.scan.outputs.versionTxt != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file
+          sed -i "s/.*$/${{ steps.candidate.outputs.candidate }}/g" ${{ steps.scan.outputs.versionTxt }}
+
+      - name: Update version number in package.json
+        if: steps.scan.outputs.packageJson != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file found
+          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.candidate.outputs.candidate }}\"/g" ${{ steps.scan.outputs.packageJson }}          
+
+      - name: Update version number in .Net projects
+        if: steps.scan.outputs.csproj != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file found
+          sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.candidate.outputs.candidate }}<\/Version>/g" ${{ steps.scan.outputs.csproj }}
+
+      - name: Commit changes
+        id: commit
+        if : steps.scan.outputs.versionTxt != '' || steps.scan.outputs.packageJson != '' || steps.scan.outputs.csproj != ''
+        run: |
+          #!/bin/sh
+
+          # Commit the changes
+          git add .
+          git commit --amend --no-edit
+
+      - name: tagger
+        id: tagger
+        run: |
+          #!/bin/sh
+
+          # Set new tags and force update
+          git tag --force ${{ steps.candidate.outputs.candidate }}
+
       - name: Push tags
         id: push
         run: |
           #!/bin/sh
 
-          # Set new tags and force update
-          git tag --force ${{ steps.semver.outputs.next }}.rc.${{ github.event.number }}
-
           # Push new tag forcing the update of the minor and major tag
           git push --tag --force
 
           # output major and minor tags
-          echo "major=$major" >> $GITHUB_OUTPUT
-          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "candidate=${{ steps.candidate.outputs.candidate }}" >> $GITHUB_OUTPUT
