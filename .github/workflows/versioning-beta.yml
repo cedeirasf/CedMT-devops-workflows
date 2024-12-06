@@ -84,6 +84,7 @@ jobs:
           if [[ $latestTag =~ $regex ]]; then
             # Remove the latest candidate tag
             git tag -d $latestTag
+            git push --tags
           fi
 
       - name: Get next version
