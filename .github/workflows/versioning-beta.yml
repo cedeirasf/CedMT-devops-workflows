@@ -66,26 +66,26 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
-      - name: Remove latest candidate tag
-        id: remove
-        run: |
-          #!/bin/sh
+      # - name: Remove latest candidate tag
+      #   id: remove
+      #   run: |
+      #     #!/bin/sh
 
-          # Get the latest candidate tag
-          latestTag=$(git tag | grep rc | tail -n 1)
+      #     # Get the latest candidate tag
+      #     latestTag=$(git tag | grep rc | tail -n 1)
 
-          # If the latestTag doesn't exists
-          if [ -z "$latestTag" ]; then
-            exit 0
-          fi
+      #     # If the latestTag doesn't exists
+      #     if [ -z "$latestTag" ]; then
+      #       exit 0
+      #     fi
 
-          # The latestTag contains a candidate tag format v###.###.###.rc.###
-          regex="v[0-9]+\.[0-9]+\.[0-9]+\.rc\.[0-9]+"
-          if [[ $latestTag =~ $regex ]]; then
-            # Remove the latest candidate tag
-            git tag -d $latestTag
-            git push --tags
-          fi
+      #     # The latestTag contains a candidate tag format v###.###.###.rc.###
+      #     regex="v[0-9]+\.[0-9]+\.[0-9]+\.rc\.[0-9]+"
+      #     if [[ $latestTag =~ $regex ]]; then
+      #       # Remove the latest candidate tag
+      #       git tag -d $latestTag
+      #       git push --tags
+      #     fi
 
       - name: Get next version
         id: semver
@@ -93,6 +93,7 @@ jobs:
         with:
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref || 'main' }}
+          skipInvalidTags: true
           majorList: ${{ github.event.inputs.majorList || 'BREAKING CHANGE, BREAKING, MAJOR' }}
           minorList: ${{ github.event.inputs.minorList || 'FEATURE, Feature, feature, FEAT, Feat, feat' }}
           patchList: ${{ github.event.inputs.patchList || 'FIX, Fix, fix, FIXED, Fixed, fixed, Refactor, Refact, Refac, refac, refact, refactor, REFAC, REFACT, REFACTOR, refacs, refacts, refactors, REFACS, REFACTS, REFACTORS, config, conf, configs, confs, cofiguration, cofigurations, configure, doc, docs, docu, document, documentation, dependencies, dependencie, depends, depend, deps, dep, chore, build, rebuild, build(deps), build(deps-dev), ci, CI, test, tests, testing, wip, WIP, Wip' }}
