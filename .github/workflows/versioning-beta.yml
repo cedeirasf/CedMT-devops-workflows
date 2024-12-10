@@ -156,11 +156,14 @@ jobs:
           # Set new tags and force update
           git tag --force $CANDIDATE_TAG
 
-      - name: Recreate merge commit
+      - name: Create a new merge commit
         run: |
-          git rebase --no-ff --onto HEAD^2 HEAD
+          # Recuperar el hash del branch base de la PR (rama destino, como main o develop)
+          BASE_BRANCH=$(git rev-parse origin/${{ github.base_ref }})
 
-      - name: Force push updated branch
+          # Crear un nuevo commit de merge basado en la rama destino y la rama PR
+          git merge $BASE_BRANCH --no-ff --no-edit
+
+      - name: Force push updated branch with new merge
         run: |
           git push origin "HEAD:${{ github.head_ref }}" --force
-       
