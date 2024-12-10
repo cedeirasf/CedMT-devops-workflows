@@ -67,6 +67,11 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
+      - name: Set up bot committer
+        run: |
+          git config --global user.email "matchingtool@cedeira.com.ar"
+          git config --global user.name "Matching Tool"
+
       - name: Get next version
         id: semver
         uses: ietf-tools/semver-action@v1
@@ -112,9 +117,6 @@ jobs:
         if: env.VERSION_TXT != ''
         run: |
           #!/bin/sh
-
-          echo "${{ github.env.CANDIDATE_TAG }}"
-          echo "${{ env.CANDIDATE_TAG }}"
 
           # update the version for each file
           sed -i "s/.*$/${CANDIDATE_TAG}/g" $VERSION_TXT
