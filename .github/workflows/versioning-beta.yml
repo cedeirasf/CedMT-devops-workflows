@@ -43,6 +43,9 @@ on:
       next-major:
         description: 'The major version with format v0'
         value: ${{ jobs.versioning.outputs.next-major }}
+      candidate:
+        description: 'The candidate tag'
+        value: ${{ jobs.versioning.outputs.candidate }}
 
 env:
   GH_TOKEN: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
