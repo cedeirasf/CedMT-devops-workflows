@@ -109,12 +109,12 @@ jobs:
           echo "VERSION_CSPROJ=$csproj" >> $GITHUB_ENV
 
       - name: Update version number in version.txt
-        if: github.env.VERSION_TXT != ''
+        if: ${{ github.env.VERSION_TXT != '' }}
         run: |
           #!/bin/sh
 
           # update the version for each file
-          sed -i "s/.*$/${{ github.env.CANDIDATE_TAG }}/g" ${{ github.env.VERSION_TXT }}
+          sed -i "s/.*$/${{ github.env.CANDIDATE_TAG }}/g" $VERSION_TXT
 
       - name: Update version number in package.json
         if: github.env.VERSION_PACKAGE_JSON != ''
@@ -148,7 +148,7 @@ jobs:
           #!/bin/sh
 
           # Set new tags and force update
-          git tag --force ${{ github.env.CANDIDATE_TAG }}
+          git tag --force $CANDIDATE_TAG
 
       - name: Push
         id: push
