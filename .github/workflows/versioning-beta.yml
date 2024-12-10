@@ -161,4 +161,5 @@ jobs:
           #!/bin/sh
 
           # Push new tag forcing the update of the minor and major tag
-          git push --tag --force
+          git push origin "HEAD:${{ github.head_ref }}" --force
+          
