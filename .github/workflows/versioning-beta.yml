@@ -67,10 +67,14 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
-      - name: Set up bot committer
+      - name: Configure git
         run: |
           git config --global user.email "matchingtool@cedeira.com.ar"
           git config --global user.name "Matching Tool"
+
+      - name: Find last user commit
+        id: find_last_user_commit
+        run: echo "LAST_USER_COMMIT=$(git rev-parse HEAD^2)" >> $GITHUB_ENV
 
       - name: Get next version
         id: semver
@@ -137,14 +141,11 @@ jobs:
           # update the version for each file found
           sed -i "s/<Version>.*<\/Version>/<Version>${CANDIDATE_TAG}<\/Version>/g" $VERSION_CSPROJ
 
-      - name: Commit changes
-        id: commit
-        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''
+      - name: Amend last user commit
+        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''  
         run: |
-          #!/bin/sh
-
-          # Commit the changes
-          git add .
+          git checkout ${{ env.LAST_USER_COMMIT }}
+          git add version.txt
           git commit --amend --no-edit
 
       - name: Tagger
@@ -155,11 +156,11 @@ jobs:
           # Set new tags and force update
           git tag --force $CANDIDATE_TAG
 
-      - name: Push
-        id: push
+      - name: Recreate merge commit
         run: |
-          #!/bin/sh
+          git rebase --no-ff --onto HEAD^2 HEAD
 
-          # Push new tag forcing the update of the minor and major tag
+      - name: Force push updated branch
+        run: |
           git push origin "HEAD:${{ github.head_ref }}" --force
-          
+       
