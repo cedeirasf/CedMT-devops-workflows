@@ -109,32 +109,35 @@ jobs:
           echo "VERSION_CSPROJ=$csproj" >> $GITHUB_ENV
 
       - name: Update version number in version.txt
-        if: ${{ github.env.VERSION_TXT != '' }}
+        if: env.VERSION_TXT != ''
         run: |
           #!/bin/sh
+
+          echo "${{ github.env.CANDIDATE_TAG }}"
+          echo "${{ env.CANDIDATE_TAG }}"
 
           # update the version for each file
-          sed -i "s/.*$/${{ github.env.CANDIDATE_TAG }}/g" $VERSION_TXT
+          sed -i "s/.*$/${CANDIDATE_TAG}/g" $VERSION_TXT
 
       - name: Update version number in package.json
-        if: github.env.VERSION_PACKAGE_JSON != ''
+        if: env.VERSION_PACKAGE_JSON != ''
         run: |
           #!/bin/sh
 
           # update the version for each file found
-          sed -i "s/\"version\": \".*\"/\"version\": \"${{ github.env.CANDIDATE_TAG }}\"/g" ${{ github.env.VERSION_PACKAGE_JSON }}
+          sed -i "s/\"version\": \".*\"/\"version\": \"${CANDIDATE_TAG}\"/g" $VERSION_PACKAGE_JSON
 
       - name: Update version number in .Net projects
-        if: github.env.VERSION_CSPROJ != ''
+        if: env.VERSION_CSPROJ != ''
         run: |
           #!/bin/sh
 
           # update the version for each file found
-          sed -i "s/<Version>.*<\/Version>/<Version>${{ github.env.CANDIDATE_TAG }}<\/Version>/g" ${{ github.env.VERSION_CSPROJ }}
+          sed -i "s/<Version>.*<\/Version>/<Version>${CANDIDATE_TAG}<\/Version>/g" $VERSION_CSPROJ
 
       - name: Commit changes
         id: commit
-        if: github.env.VERSION_TXT != '' || github.env.VERSION_PACKAGE_JSON != '' || github.env.VERSION_CSPROJ != ''
+        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''
         run: |
           #!/bin/sh
 
