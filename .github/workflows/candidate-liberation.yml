@@ -23,7 +23,7 @@ jobs:
     needs: call-versioning-workflow
     uses: cedeirasf/CedMT-devops-workflows/.github/workflows/release.yml@v1
     with:
-      next: ${{ needs.call-versioning-workflow.outputs.next-patch }}
+      next: ${{ needs.call-versioning-workflow.outputs.candidate }}
       include-artifacts: false
     secrets:
       github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
