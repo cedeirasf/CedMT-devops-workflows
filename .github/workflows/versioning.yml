@@ -63,6 +63,11 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
+      - name: Configure git
+        run: |
+          git config --global user.email "matchingtool@cedeira.com.ar"
+          git config --global user.name "Matching Tool"
+
       - name: Get next version
         id: semver
         uses: ietf-tools/semver-action@v1
@@ -73,6 +78,54 @@ jobs:
           minorList: ${{ github.event.inputs.minorList || 'FEATURE, Feature, feature, FEAT, Feat, feat' }}
           patchList: ${{ github.event.inputs.patchList || 'FIX, Fix, fix, FIXED, Fixed, fixed, Refactor, Refact, Refac, refac, refact, refactor, REFAC, REFACT, REFACTOR, refacs, refacts, refactors, REFACS, REFACTS, REFACTORS, config, conf, configs, confs, cofiguration, cofigurations, configure, doc, docs, docu, document, documentation, dependencies, dependencie, depends, depend, deps, dep, chore, build, rebuild, build(deps), build(deps-dev), ci, CI, test, tests, testing, wip, WIP, Wip' }}
           patchAll: false
+
+      - name: Scan versioning sources
+        id: scan
+        run: |
+          #!/bin/sh
+
+          # Find the version.txt file
+          versionTxt=$(find . -name version.txt)
+
+          # Find the package.json file
+          packageJson=$(find . -name package.json)
+
+          # Find the .csproj files
+          csproj=$(find . -name "*.csproj")
+
+          echo "VERSION_TXT=$versionTxt" >> $GITHUB_ENV
+          echo "VERSION_PACKAGE_JSON=$packageJson" >> $GITHUB_ENV
+          echo "VERSION_CSPROJ=$csproj" >> $GITHUB_ENV
+
+      - name: Update version number in version.txt
+        if: env.VERSION_TXT != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file
+          sed -i "s/.*$/${{ steps.semver.outputs.next }}/g" $VERSION_TXT
+
+      - name: Update version number in package.json
+        if: env.VERSION_PACKAGE_JSON != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file found
+          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.semver.outputs.next }}\"/g" $VERSION_PACKAGE_JSON
+
+      - name: Update version number in .Net projects
+        if: env.VERSION_CSPROJ != ''
+        run: |
+          #!/bin/sh
+
+          # update the version for each file found
+          sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" $VERSION_CSPROJ
+
+      - name: Amend last user commit
+        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''  
+        run: |
+          git add .
+          git commit --amend --no-edit
 
       - name: Push tags
         id: push
