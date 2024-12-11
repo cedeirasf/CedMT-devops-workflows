@@ -145,7 +145,7 @@ jobs:
         if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''  
         run: |
           git checkout ${{ env.LAST_USER_COMMIT }}
-          git add version.txt
+          git add .
           git commit --amend --no-edit
 
       - name: Tagger
