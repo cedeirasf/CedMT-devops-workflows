@@ -1,4 +1,4 @@
-name: Liberation
+name: Candidate Liberation
 
 on:
   pull_request:
