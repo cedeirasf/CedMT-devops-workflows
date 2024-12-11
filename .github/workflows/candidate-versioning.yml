@@ -1,10 +1,10 @@
-name: Versioning
+name: Candidate Versioning
 
 on:
   workflow_call:
     inputs:
       branch:
-        description: 'The branch where the versioning will be executed'
+        description: 'The branch where the candidate versioning will be executed'
         type: string
         required: false
         default: 'main'
@@ -40,13 +40,16 @@ on:
       next-major:
         description: 'The major version with format v0'
         value: ${{ jobs.versioning.outputs.next-major }}
+      candidate:
+        description: 'The candidate tag'
+        value: ${{ jobs.versioning.outputs.candidate }}
 
 env:
   GH_TOKEN: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
 
 jobs:
   versioning:
-    name: Versioning
+    name: Candidate Versioning
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -55,6 +58,7 @@ jobs:
       next-patch: ${{ steps.semver.outputs.next }}
       next-minor: ${{ steps.push.outputs.minor }}
       next-major: ${{ steps.push.outputs.major }}
+      candidate: ${{ steps.candidate.outputs.CANDIDATE_TAG }}
     steps:
       - name: Set up repository
         uses: actions/checkout@v4
@@ -68,16 +72,32 @@ jobs:
           git config --global user.email "matchingtool@cedeira.com.ar"
           git config --global user.name "Matching Tool"
 
+      - name: Find last user commit
+        id: find_last_user_commit
+        run: echo "LAST_USER_COMMIT=$(git rev-parse HEAD^2)" >> $GITHUB_ENV
+
       - name: Get next version
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ secrets.github-token || secrets.GITHUB_TOKEN }}
-          branch: ${{ github.event.inputs.branch || 'main' }}
+          branch: ${{ github.ref || 'main' }}
+          skipInvalidTags: true
           majorList: ${{ github.event.inputs.majorList || 'BREAKING CHANGE, BREAKING, MAJOR' }}
           minorList: ${{ github.event.inputs.minorList || 'FEATURE, Feature, feature, FEAT, Feat, feat' }}
           patchList: ${{ github.event.inputs.patchList || 'FIX, Fix, fix, FIXED, Fixed, fixed, Refactor, Refact, Refac, refac, refact, refactor, REFAC, REFACT, REFACTOR, refacs, refacts, refactors, REFACS, REFACTS, REFACTORS, config, conf, configs, confs, cofiguration, cofigurations, configure, doc, docs, docu, document, documentation, dependencies, dependencie, depends, depend, deps, dep, chore, build, rebuild, build(deps), build(deps-dev), ci, CI, test, tests, testing, wip, WIP, Wip' }}
           patchAll: false
+
+      - name: Generate candidate tag
+        id: candidate
+        run: |
+          #!/bin/sh
+
+          # Generate the candidate tag
+          candidate=${{ steps.semver.outputs.next }}.rc.${{ github.event.number }}
+  
+          # Output the candidate tag
+          echo "CANDIDATE_TAG=$candidate" >> $GITHUB_ENV
 
       - name: Scan versioning sources
         id: scan
@@ -103,7 +123,7 @@ jobs:
           #!/bin/sh
 
           # update the version for each file
-          sed -i "s/.*$/${{ steps.semver.outputs.next }}/g" $VERSION_TXT
+          sed -i "s/.*$/${CANDIDATE_TAG}/g" $VERSION_TXT
 
       - name: Update version number in package.json
         if: env.VERSION_PACKAGE_JSON != ''
@@ -111,7 +131,7 @@ jobs:
           #!/bin/sh
 
           # update the version for each file found
-          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.semver.outputs.next }}\"/g" $VERSION_PACKAGE_JSON
+          sed -i "s/\"version\": \".*\"/\"version\": \"${CANDIDATE_TAG}\"/g" $VERSION_PACKAGE_JSON
 
       - name: Update version number in .Net projects
         if: env.VERSION_CSPROJ != ''
@@ -119,31 +139,31 @@ jobs:
           #!/bin/sh
 
           # update the version for each file found
-          sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" $VERSION_CSPROJ
+          sed -i "s/<Version>.*<\/Version>/<Version>${CANDIDATE_TAG}<\/Version>/g" $VERSION_CSPROJ
 
       - name: Amend last user commit
         if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''  
         run: |
+          git checkout ${{ env.LAST_USER_COMMIT }}
           git add .
           git commit --amend --no-edit
 
-      - name: Push tags
-        id: push
+      - name: Tagger
+        id: tagger
         run: |
           #!/bin/sh
-          # Get minor tag
-          minor=$(echo ${{ steps.semver.outputs.next }} | sed 's/.[0-9]\{1,\}$//')
-          # Get major tag
-          major=$(echo ${{ steps.semver.outputs.next }} | sed 's/.[0-9]\{1,\}.[0-9]\{1,\}$//')
 
           # Set new tags and force update
-          git tag ${{ steps.semver.outputs.next }}
-          git tag --force $minor
-          git tag --force $major
+          git tag --force $CANDIDATE_TAG
 
-          # Push new tag forcing the update of the minor and major tag
-          git push --tag --force
+      - name: Create a new merge commit
+        run: |
+          # Recuperar el hash del branch base de la PR (rama destino, como main o develop)
+          BASE_BRANCH=$(git rev-parse origin/${{ github.base_ref }})
 
-          # output major and minor tags
-          echo "major=$major" >> $GITHUB_OUTPUT
-          echo "minor=$minor" >> $GITHUB_OUTPUT
+          # Crear un nuevo commit de merge basado en la rama destino y la rama PR
+          git merge $BASE_BRANCH --no-ff --no-edit
+
+      - name: Force push updated branch with new merge
+        run: |
+          git push origin "HEAD:${{ github.head_ref }}" --force

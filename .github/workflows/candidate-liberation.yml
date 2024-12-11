@@ -1,0 +1,29 @@
+name: Candidate Liberation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  workflow_call:
+    secrets:
+      github-token:
+        description: 'The Github token'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  call-versioning-workflow:
+    uses: cedeirasf/CedMT-devops-workflows/.github/workflows/candidate-versioning.yml@v1
+    secrets:
+      github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
+
+  call-release-workflow:
+    needs: call-versioning-workflow
+    uses: cedeirasf/CedMT-devops-workflows/.github/workflows/release.yml@v1
+    with:
+      next: ${{ needs.call-versioning-workflow.outputs.candidate }}
+      include-artifacts: false
+    secrets:
+      github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
