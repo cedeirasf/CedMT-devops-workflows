@@ -1,13 +1,10 @@
-name: Versioning Beta
+name: Candidate Versioning
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, reopened, synchronize, labeled, unlabeled]
   workflow_call:
     inputs:
       branch:
-        description: 'The branch where the versioning will be executed'
+        description: 'The branch where the candidate versioning will be executed'
         type: string
         required: false
         default: 'main'
@@ -52,7 +49,7 @@ env:
 
 jobs:
   versioning:
-    name: Versioning
+    name: Candidate Versioning
     runs-on: ubuntu-latest
     permissions:
       contents: write
