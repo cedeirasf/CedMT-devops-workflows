@@ -39,7 +39,6 @@
     - [Entry](#entry)
     - [Progression](#progression)
     - [Termination](#termination)
-- [Code of conduct](#code-of-conduct)
 - [License](#license)
 
 ## Introducing `workflows`
@@ -402,12 +401,6 @@ jobs:
     secrets:
       GH_PROJECT_AUTOMATION: ${{ secrets.GH_PROJECT_AUTOMATION }}
 ```
-
-## Code of conduct
-
-`/CODE_OF_CONDUCT.md`
-
-This code is based on the covenant code. He is only required to specify an email address to the community to send his messages. Now, this email is alderete.mauro@gmail.com.
 
 ## License
 
