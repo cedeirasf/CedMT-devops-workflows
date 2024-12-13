@@ -128,6 +128,11 @@ jobs:
           git add .
           git commit --amend --no-edit
 
+      - name: Push changes
+        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''
+        run: |
+          git push --force
+
       - name: Push tags
         id: push
         run: |
