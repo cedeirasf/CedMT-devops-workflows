@@ -34,12 +34,12 @@
   - [Release](#release)
   - [Liberation](#liberation)
   - [Project Automation](#project-automation)
+  - [Candidate Versioning](#candidate-versioning)
+  - [Candidate Liberation](#candidate-liberation)
     - [Entry](#entry)
     - [Progression](#progression)
     - [Termination](#termination)
-- [Code of conduct](#code-of-conduct)
 - [License](#license)
-
 
 ## Introducing `workflows`
 
@@ -49,6 +49,8 @@ This repository contains a collection of reusable workflows to implement some ty
 - `versioning` calculate the next version tags and create them based on **Semantic Versioning**.
 - `release` creates a release the last tag pushed attaching artifacts if you want.
 - `liberation` combine `versioning` and `release` workflows in a simple flow to apply CI in repos that you don't need publish release with artifacts.
+- `candidate-versioning` is a workflow that calculates the next version tags and creates a candidate version tag based on last PR changes. This is useful when you want to test the versioning process before the final release.
+- `candidate-liberation` combine `candidate-versioning` and `release` workflows in a simple flow to apply CI in repos that you don't need publish release with artifacts.
 - `project-automation` makes it easier to trace your issues in a **GitHub Project Board**, listening to the developer's collaborations.
 
 ## How to use this workflows
@@ -86,7 +88,7 @@ You need pass a GITHUB_TOKEN valid.
 
 Remember set `pull-request: write` permission to allow that workflow creates an approvals on PR.
 
-> [!NOTE] 
+> [!NOTE]
 > If you want receive the approve need the repo enable `Allow GitHub Actions to Create and approve pull request` in `Setting >> Actions >> General >> Workflow permissions`.
 
 For run:
@@ -111,7 +113,12 @@ Once time the tag is calculated, create three tags over the last commit and push
 - Minor tag version `v0.0`
 - Major tag version `v0`
 
-That allows mantein the incremental versioning tracing updated.
+That allows maintain the incremental versioning tracing updated.
+
+If the repository has a `package.json` file, a `*.csproj` file, or a simple `version.txt` file, the workflow updates the version in the file.
+
+> [!WARNING]
+> This feature manipulates the files directly, thats means that the workflow push changes to the repository modifying the history. You should need execute a `git pull --rebase` or `git pull --all --prune --tags --force` after the workflow finish to avoid conflicts.
 
 You need pass a GITHUB_TOKEN valid.
 
@@ -228,6 +235,98 @@ Is based on a `Kanban Flow` composed by trhee principal sections:
 - Progression
 - Termination
 
+### Candidate Versioning
+
+Checks conventional commits to calculate the next incremental version based on [ietf-tools/semver-action](https://github.com/ietf-tools/semver-action).
+
+Once time the tag is calculated, create one candidate tags over the last commit made by users in the current PR and push them:
+
+The candidate tag is created with the next format:
+
+`vx.y.z-candidate.#`
+
+Where `x.y.z` is the calculated version and `#` is the number of the PR that is being processed.
+
+If the repository has a `package.json` file, a `*.csproj` file, or a simple `version.txt` file, the workflow updates the version in the files with the candidate tag.
+
+> [!WARNING]
+> This feature manipulates the files directly, thats means that the workflow push changes to the repository modifying the history. You should need execute a `git pull --rebase` or `git pull --all --prune --tags --force` after the workflow finish to avoid conflicts.
+
+This workflows is prepared to run when a PR is opened, reopened, synchronize, labeled, or unlabeled. The candidate tags is created only when the PR is opened, and is updated when the PR is synchronized.
+
+Once time the PR is closed, the candidate tag doesn't removed. Stay in the repository but the commit associated does not belong to any branch.
+
+GitHub announces this with the next message:
+
+> This commit does not belong to any branch on this repository, and may belong to a fork outside of the repository.
+
+You need pass a GITHUB_TOKEN valid.
+
+> [!NOTE]
+> If you want that the `versioning` can trigger other workflow, for example, for start a deployment processes... you need pass a TOKEN different the `secrets.GITHUB_TOKEN`. You can learn more about [triggering a workflow](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow#triggering-a-workflow-from-a-workflow).
+
+Remember set `contents: write` permission to allow that workflow push the tags created.
+
+For run with triggering other workflows support:
+
+```yaml
+jobs:
+  permissions:
+    contents: write
+  call-labeling-workflow:
+    uses: mauroalderete/workflows/.github/workflows/versioning.yml@v0
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Candidate Liberation
+
+This workflows combine `candidate-versioning` and `release` versioning reusable workflows to bring a simple and repeatable flow to liberate new repositories versions that don't include artifacts to attach.
+
+Is prepared to run when a PR is opened, reopened, synchronize, labeled, or unlabeled.
+
+This flow is useful to repositories that don't publish new releases with other artifacts that must to be building after the versioning tag, but before the release process.
+
+For example, the current repository don't need build artifacts, so is an excelent use case for consume `candidate-liberation` workflow.
+
+Other use is when you want to test the versioning process before the final release. In this case, you can use the candidate tag to test the versioning process and then, when you are sure that everything is correct, you can create the final release.
+
+Otherwise, repositories such as based on npm, often requires an bulding steps or update the versioning tag into `package.json` once the versioning is calculated but before the candidate release to be published. In this cases `candidate-liberation` could not enough for you. But feel free to take it like example or propose more liberation alternatives to reimplement.
+
+For use remember implement the same permissions used by `candidate-versioning` and `release`, and setup the correctly `github-token` if you want *dispatch* other workflows later.
+
+```yaml
+name: Candidate Liberation
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_call:
+    secrets:
+      github-token:
+        description: 'The Github token'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  call-versioning-workflow:
+    uses: mauroalderete/workflows/.github/workflows/candidate-versioning.yml@v1
+    secrets:
+      github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
+
+  call-release-workflow:
+    needs: call-versioning-workflow
+    uses: mauroalderete/workflows/.github/workflows/release.yml@v1
+    with:
+      next: ${{ needs.call-versioning-workflow.outputs.next-patch }}
+      include-artifacts: false
+    secrets:
+      github-token: ${{ secrets.GH_PROJECT_AUTOMATION || secrets.github-token || secrets.GITHUB_TOKEN }}
+```
+
 #### Entry
 
 Here you found the new issues created with ISSUE_TEMPLATES. Thats are separate on three statuses:
@@ -238,11 +337,11 @@ Here you found the new issues created with ISSUE_TEMPLATES. Thats are separate o
 
 When a new issue is created, the issue template assign can assign a label. `project-automation` is triggered then and scan the labels to known to that status move the issue.
 
-Is recomended that issue templates link other label like `lifecycle/needs-triage` to easily filters.
+Is recommended that issue templates link other label like `lifecycle/needs-triage` to easily filters.
 
 #### Progression
 
-This sections of status is the mose extensive in the current flow approaching. Consist in some manual and automatical steps. Each one of them are represented for a status, condition and intent in an no exactly linear flow.
+This sections of status is the more extensive in the current flow approaching. Consist in some manual and automatic steps. Each one of them are represented for a status, condition and intent in an no exactly linear flow.
 
 - **Triage** [Manual]: Here to go all new issues presented in Entry sections, usually with `lifecycle/needs-triage`, that you start to the evaluation or discussion process. In this step you would remove `lifecycle/needs-triage`.
 - **Backlog** [Manual]: The issues that pass the Triage status, and contains all information needed to resolve the issue are moved to Backlog status. Doesn't know when will start resolving or who or his difficult or impact.
@@ -302,12 +401,6 @@ jobs:
     secrets:
       GH_PROJECT_AUTOMATION: ${{ secrets.GH_PROJECT_AUTOMATION }}
 ```
-
-## Code of conduct
-
-`/CODE_OF_CONDUCT.md`
-
-This code is based on the covenant code. He is only required to specify an email address to the community to send his messages. Now, this email is alderete.mauro@gmail.com.
 
 ## License
 
