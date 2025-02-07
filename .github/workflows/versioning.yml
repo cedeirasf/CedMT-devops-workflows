@@ -135,13 +135,15 @@ jobs:
           #!/bin/bash
 
           # find all .csproj files and store them in a variable for iteration
-          IFS=$'\n' read -d '' -r -a files <<< $(find . -name '*.csproj')
-
+          files=()
+          while IFS= read -r -d $'\0' file; do
+            files+=("$file")
+          done < <(find . -name "*.csproj" -print0)
+          
           # iterate over each file
-          for file in "${files[@]}"
-          do
-            # update the version for each file found
-            sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" $file
+          for file in "${files[@]}"; do
+            echo "Procesando archivo: $file"
+            sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" "$file"
           done
 
       - name: Amend last user commit
