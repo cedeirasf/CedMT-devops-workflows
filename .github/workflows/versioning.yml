@@ -48,6 +48,9 @@ jobs:
   versioning:
     name: Versioning
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: write
     outputs:
@@ -83,60 +86,79 @@ jobs:
       - name: Scan versioning sources
         id: scan
         run: |
-          #!/bin/sh
+          #!/bin/bash
 
-          # Find the version.txt file
-          versionTxt=$(find . -name version.txt)
+          # Eval if exists a version.txt file to update, store true or false
+          if [ -f "version.txt" ]; then
+            updateVersionTxt="true"
+          else
+            updateVersionTxt="false"
+          fi
 
           # Find the package.json file
-          packageJson=$(find . -name package.json)
+          if [ -f "package.json" ]; then
+            updatePackageJson="true"
+          else
+            updatePackageJson="false"
+          fi
 
           # Find the .csproj files
-          csproj=$(find . -name "*.csproj")
+          if [ -n "$(find . -name '*.csproj')" ]; then
+            updateCsproj="true"
+          else
+            updateCsproj="false"
+          fi
 
-          echo "VERSION_TXT=$versionTxt" >> $GITHUB_ENV
-          echo "VERSION_PACKAGE_JSON=$packageJson" >> $GITHUB_ENV
-          echo "VERSION_CSPROJ=$csproj" >> $GITHUB_ENV
+          echo "UPDATE_VERSION_TXT=$updateVersionTxt" >> $GITHUB_ENV
+          echo "UPDATE_PACKAGE_JSON=$updatePackageJson" >> $GITHUB_ENV
+          echo "UPDATE_CSPROJ=$updateCsproj" >> $GITHUB_ENV
 
       - name: Update version number in version.txt
-        if: env.VERSION_TXT != ''
+        if: ${{ env.UPDATE_VERSION_TXT == 'true' }}
         run: |
-          #!/bin/sh
+          #!/bin/bash
 
           # update the version for each file
-          sed -i "s/.*$/${{ steps.semver.outputs.next }}/g" $VERSION_TXT
+          sed -i "s/.*$/${{ steps.semver.outputs.next }}/g" $(find . -name 'version.txt')
 
       - name: Update version number in package.json
-        if: env.VERSION_PACKAGE_JSON != ''
+        if: ${{ env.UPDATE_PACKAGE_JSON == 'true' }}
         run: |
-          #!/bin/sh
+          #!/bin/bash
 
           # update the version for each file found
-          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.semver.outputs.next }}\"/g" $VERSION_PACKAGE_JSON
+          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.semver.outputs.next }}\"/g" $(find . -name 'package.json')
 
       - name: Update version number in .Net projects
-        if: env.VERSION_CSPROJ != ''
+        if: ${{ env.UPDATE_CSPROJ == 'true' }}
         run: |
-          #!/bin/sh
+          #!/bin/bash
 
-          # update the version for each file found
-          sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" $VERSION_CSPROJ
+          # find all .csproj files and store them in a variable for iteration
+          IFS=$'\n' read -d '' -r -a files <<< $(find . -name '*.csproj')
+
+          # iterate over each file
+          for file in "${files[@]}"
+          do
+            # update the version for each file found
+            sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" $file
+          done
 
       - name: Amend last user commit
-        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''  
+        if: ${{ env.UPDATE_VERSION_TXT == 'true' || env.UPDATE_PACKAGE_JSON == 'true' || env.UPDATE_CSPROJ == 'true' }}
         run: |
           git add .
           git commit --amend --no-edit
 
       - name: Push changes
-        if: env.VERSION_TXT != '' || env.VERSION_PACKAGE_JSON != '' || env.VERSION_CSPROJ != ''
+        if: ${{ env.UPDATE_VERSION_TXT == 'true' || env.UPDATE_PACKAGE_JSON == 'true' || env.UPDATE_CSPROJ == 'true' }}
         run: |
           git push --force
 
       - name: Push tags
         id: push
         run: |
-          #!/bin/sh
+          #!/bin/bash
           # Get minor tag
           minor=$(echo ${{ steps.semver.outputs.next }} | sed 's/.[0-9]\{1,\}$//')
           # Get major tag
