@@ -1,6 +1,6 @@
 {
     "name": "cedmt-devops-workflows",
-    "version": "123",
+    "version": "v1.1.7",
     "description": "A sample project to test version updates",
     "main": "index.js",
     "scripts": {
