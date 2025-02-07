@@ -115,7 +115,7 @@ Once time the tag is calculated, create three tags over the last commit and push
 
 That allows maintain the incremental versioning tracing updated.
 
-If the repository has a `package.json` file, a `*.csproj` file, or a simple `version.txt` file, the workflow updates the version in the file.
+If the repository has a `package.json` file, a `*.csproj` file, or a simple `version.txt` file, the workflow updates the version in the file. ***See [Issue #14](https://github.com/cedeirasf/CedMT-devops-workflows/issues/14) for known some limitations.***
 
 > [!WARNING]
 > This feature manipulates the files directly, thats means that the workflow push changes to the repository modifying the history. You should need execute a `git pull --rebase` or `git pull --all --prune --tags --force` after the workflow finish to avoid conflicts.
