@@ -139,11 +139,13 @@ jobs:
           while IFS= read -r -d $'\0' file; do
             files+=("$file")
           done < <(find . -name "*.csproj" -print0)
+
+          versionWithoutPrefix=$(echo ${{ steps.semver.outputs.next }} | sed 's/v//g')
           
           # iterate over each file
           for file in "${files[@]}"; do
             echo "Procesando archivo: $file"
-            sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.semver.outputs.next }}<\/Version>/g" "$file"
+            sed -i "s/<Version>.*<\/Version>/<Version>$versionWithoutPrefix<\/Version>/g" "$file"
           done
 
       - name: Amend last user commit
