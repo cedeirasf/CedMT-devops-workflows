@@ -1,2 +1,8 @@
 # add files, folders and others patterns to ignore by git
 # You can use git default to specific stacks offered by GitHub, too.
+
+# ignore temporary files
+*.tmp
+*.temp
+[Tt]emp/
+[Tt]mp/
