@@ -89,14 +89,14 @@ jobs:
           #!/bin/bash
 
           # Eval if exists a version.txt file to update, store true or false
-          if [ -f "version.txt" ]; then
+          if [ -n "$(find . -name 'version.txt')" ]; then
             updateVersionTxt="true"
           else
             updateVersionTxt="false"
           fi
 
           # Find the package.json file
-          if [ -f "package.json" ]; then
+          if [ -n "$(find . -name 'package.json')" ]; then
             updatePackageJson="true"
           else
             updatePackageJson="false"
